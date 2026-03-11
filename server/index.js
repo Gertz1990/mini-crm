@@ -3,12 +3,20 @@ import express from 'express'
 import fs from 'fs'
 import path from 'path'
 import { v4 as uuidv4 } from 'uuid'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 const app = express()
 const PORT = process.env.PORT || 3001
 const DATA_FILE = path.resolve('./server/clients.json')
 
 app.use(express.json())
+
+// Serve static files from the React app
+const distPath = path.join(__dirname, '../dist')
+app.use(express.static(distPath))
 
 function loadClients() {
   try {
@@ -50,6 +58,11 @@ app.delete('/clients/:id', (req, res) => {
   }
   saveClients(clients)
   res.status(204).end()
+})
+
+// Serve React app for all other routes (SPA fallback)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'))
 })
 
 app.listen(PORT, () => {
