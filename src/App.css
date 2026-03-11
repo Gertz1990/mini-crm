@@ -43,9 +43,9 @@
 /* ======== CRM Styles - Apple Style ======== */
 
 .app-root {
-  max-width: 1000px;
+  max-width: 100%;
   margin: 0 auto;
-  padding: 2rem;
+  padding: 2rem 1rem;
   min-height: 100vh;
   background-color: var(--color-bg);
 }
@@ -453,6 +453,7 @@
   display: flex;
   flex-direction: column;
   height: 100%;
+  width: 100%;
   background: var(--color-bg);
   border: 1px solid var(--color-border);
   border-radius: 12px;
@@ -503,6 +504,12 @@
   background: var(--color-bg);
   overflow: hidden;
   transition: all 0.2s ease;
+  touch-action: none;
+}
+
+.react-grid-item > div {
+  width: 100%;
+  height: 100%;
 }
 
 .react-grid-item.react-grid-placeholder {
@@ -511,6 +518,10 @@
   border-radius: 12px;
   opacity: 0.8;
   z-index: 2;
+}
+
+.react-grid-item.react-grid-item.cssTransforms {
+  transition-duration: 200ms;
 }
 
 .react-grid-item > .resizing {
@@ -523,28 +534,51 @@
   background: var(--color-bg-secondary);
 }
 
-/* Disable resizing visibility */
-.react-resizable-hide {
-  display: none !important;
+.react-grid-item.react-grid-placeholder.placeholder-visible {
+  opacity: 0.6;
 }
 
+/* Resize Handle */
 .react-resizable {
   position: relative;
 }
 
-.react-resizable::after {
-  content: '';
+.react-resizable-handle {
   position: absolute;
-  bottom: 0;
-  right: 0;
   width: 20px;
   height: 20px;
+  bottom: 10px;
+  right: 10px;
   background: radial-gradient(circle at bottom right, var(--color-primary) 40%, transparent 71%);
   cursor: se-resize;
   opacity: 0;
   transition: opacity 0.2s ease;
+  z-index: 20;
+  bottom: 0;
+  right: 0;
 }
 
-.react-resizable:hover::after {
+.react-resizable-handle::after {
+  content: '';
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 5px;
+  height: 5px;
+  border-right: 2px solid var(--color-primary);
+  border-bottom: 2px solid var(--color-primary);
+  opacity: 0.7;
+}
+
+.react-grid-item:hover .react-resizable-handle {
   opacity: 0.5;
+}
+
+.react-grid-item.resizing .react-resizable-handle {
+  opacity: 1;
+}
+
+/* Disable default resizing visibility */
+.react-resizable-hide {
+  display: none !important;
 }

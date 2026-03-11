@@ -1,5 +1,4 @@
-import { useEffect, useState } from 'react'
-import { useRef } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import GridLayout from 'react-grid-layout'
 import FormPanel from './components/FormPanel'
 import FilterPanel from './components/FilterPanel'
@@ -68,6 +67,7 @@ export default function CRMApp() {
   const [clients, setClients] = useState(() => loadClients())
   const [layout, setLayout] = useState(() => loadLayout())
   const [visibleModules, setVisibleModules] = useState(() => loadVisibility())
+  const [containerWidth, setContainerWidth] = useState(window.innerWidth - 60)
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -84,6 +84,15 @@ export default function CRMApp() {
   const [sortDir, setSortDir] = useState('desc') // asc or desc
   const [page, setPage] = useState(0)
   const fileRef = useRef(null)
+
+  // Handle window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setContainerWidth(window.innerWidth - 60)
+    }
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [])
 
   useEffect(() => {
     saveClients(clients)
@@ -262,13 +271,14 @@ export default function CRMApp() {
         onLayoutChange={setLayout}
         cols={12}
         rowHeight={50}
-        width={1000}
+        width={containerWidth}
         containerPadding={[0, 0]}
         margin={[10, 10]}
         draggableHandle=".drag-handle"
         isResizable={true}
         isDraggable={true}
         compactType="vertical"
+        preventCollision={false}
       >
         {visibleModules.formPanel && (
           <div key="form-panel" className="react-grid-item">
