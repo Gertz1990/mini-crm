@@ -1,3 +1,4 @@
+/* global process */
 import express from 'express'
 import fs from 'fs'
 import path from 'path'
@@ -13,7 +14,7 @@ function loadClients() {
   try {
     const content = fs.readFileSync(DATA_FILE, 'utf-8')
     return JSON.parse(content)
-  } catch (e) {
+  } catch {
     return []
   }
 }

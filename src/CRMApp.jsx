@@ -1,7 +1,29 @@
 import { useEffect, useState } from 'react'
 import { useRef } from 'react'
+import GridLayout from 'react-grid-layout'
+import FormPanel from './components/FormPanel'
+import FilterPanel from './components/FilterPanel'
+import ClientListPanel from './components/ClientListPanel'
+import StatisticsPanel from './components/StatisticsPanel'
+import DashboardHeader from './components/DashboardHeader'
 
 const STORAGE_KEY = 'mini_crm_clients_v1'
+const LAYOUT_STORAGE_KEY = 'mini_crm_layout_v1'
+const VISIBILITY_STORAGE_KEY = 'mini_crm_visibility_v1'
+
+const DEFAULT_LAYOUT = [
+  { x: 0, y: 0, w: 6, h: 4, i: 'form-panel', minW: 4, minH: 2 },
+  { x: 6, y: 0, w: 6, h: 4, i: 'filter-panel', minW: 4, minH: 2 },
+  { x: 0, y: 4, w: 4, h: 3, i: 'stats-panel', minW: 3, minH: 2 },
+  { x: 4, y: 4, w: 8, h: 5, i: 'client-list-panel', minW: 5, minH: 3 }
+]
+
+const DEFAULT_VISIBILITY = {
+  formPanel: true,
+  filterPanel: true,
+  statsPanel: true,
+  clientListPanel: true
+}
 
 function loadClients() {
   try {
@@ -22,8 +44,31 @@ function saveClients(list) {
   }
 }
 
+function loadLayout() {
+  try {
+    const saved = localStorage.getItem(LAYOUT_STORAGE_KEY)
+    return saved && Array.isArray(JSON.parse(saved)) ? JSON.parse(saved) : DEFAULT_LAYOUT
+  } catch (e) {
+    console.warn('Layout load failed, using defaults', e)
+    return DEFAULT_LAYOUT
+  }
+}
+
+function loadVisibility() {
+  try {
+    const saved = localStorage.getItem(VISIBILITY_STORAGE_KEY)
+    return saved ? JSON.parse(saved) : DEFAULT_VISIBILITY
+  } catch (e) {
+    console.warn('Visibility load failed, using defaults', e)
+    return DEFAULT_VISIBILITY
+  }
+}
+
 export default function CRMApp() {
   const [clients, setClients] = useState(() => loadClients())
+  const [layout, setLayout] = useState(() => loadLayout())
+  const [visibleModules, setVisibleModules] = useState(() => loadVisibility())
+
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
@@ -44,27 +89,40 @@ export default function CRMApp() {
     saveClients(clients)
   }, [clients])
 
+  // Persist layout to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(LAYOUT_STORAGE_KEY, JSON.stringify(layout))
+    } catch (e) {
+      console.error('Failed to save layout', e)
+    }
+  }, [layout])
+
+  // Persist visibility to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(VISIBILITY_STORAGE_KEY, JSON.stringify(visibleModules))
+    } catch (e) {
+      console.error('Failed to save visibility', e)
+    }
+  }, [visibleModules])
+
   // helpers
-  function addClient(e) {
-    e.preventDefault()
-    if (!name.trim()) {
+  function addClient(clientData) {
+    if (!clientData.name.trim()) {
       setError('Имя обязательно')
       return
     }
     const now = new Date().toISOString()
     const newClient = {
       id: Date.now(),
-      name: name.trim(),
-      email: email.trim(),
-      phone: phone.trim(),
-      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      name: clientData.name.trim(),
+      email: clientData.email.trim(),
+      phone: clientData.phone.trim(),
+      tags: clientData.tags.split(',').map(t => t.trim()).filter(Boolean),
       createdAt: now,
     }
     setClients((prev) => [...prev, newClient])
-    setName('')
-    setEmail('')
-    setPhone('')
-    setTags('')
     setError('')
   }
 
@@ -177,109 +235,97 @@ export default function CRMApp() {
       return 0
     })
 
+  const handleResetLayout = () => {
+    setLayout(DEFAULT_LAYOUT)
+    localStorage.removeItem(LAYOUT_STORAGE_KEY)
+  }
+
+  const handleToggleModule = (moduleKey) => {
+    setVisibleModules((prev) => ({
+      ...prev,
+      [moduleKey]: !prev[moduleKey]
+    }))
+  }
+
   const perPage = 10
   const start = page * perPage
   const paged = filteredClients.slice(start, start + perPage)
   const totalPages = Math.ceil(filteredClients.length / perPage)
 
   return (
-    <div className="crm-app">
-      <form className="crm-form" onSubmit={addClient}>
-        <input
-          placeholder="Имя"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-        />
-        <input
-          placeholder="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
-        <input
-          placeholder="Телефон"
-          value={phone}
-          onChange={(e) => setPhone(e.target.value)}
-        />
-        <input
-          placeholder="Теги (через запятую)"
-          value={tags}
-          onChange={(e) => setTags(e.target.value)}
-        />
-        <button type="submit">Добавить</button>
-      </form>
-      {error && <div className="error">{error}</div>}
+    <div className="app-root">
+      <DashboardHeader visibleModules={visibleModules} onToggleModule={handleToggleModule} />
 
-      <div style={{ marginBottom: '12px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
-        <input
-          placeholder="Поиск клиентов..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          style={{ padding: '6px', width: '100%', maxWidth: '200px' }}
-        />
-        <select value={sortKey} onChange={(e) => setSortKey(e.target.value)}>
-          <option value="createdAt">Дата добавления</option>
-          <option value="name">Имя</option>
-        </select>
-        <button className="filter-btn" onClick={() => setSortDir(sortDir === 'asc' ? 'desc' : 'asc')}>
-          {sortDir === 'asc' ? '⬆︎' : '⬇︎'}
-        </button>
-      </div>
-
-      <div style={{ marginBottom: '12px', display: 'flex', gap: '8px' }}>
-        <button className="filter-btn" onClick={exportJSON}>Экспорт JSON</button>
-        <button className="filter-btn" onClick={exportCSV}>Экспорт CSV</button>
-        <button className="filter-btn" onClick={() => fileRef.current?.click()}>Импорт JSON</button>
-        <input ref={fileRef} type="file" accept="application/json" style={{ display: 'none' }} onChange={importJSON} />
-      </div>
-
-      <div className="client-list">
-        {clients.length === 0 && <div className="empty">Нет клиентов, добавьте нового.</div>}
-        {paged.map((c) => (
-          <div key={c.id} className="client-item">
-            <div className="info">
-              {editingId === c.id ? (
-                <>
-                  <input value={editName} onChange={(e) => setEditName(e.target.value)} />
-                  <input value={editEmail} onChange={(e) => setEditEmail(e.target.value)} placeholder="Email" />
-                  <input value={editPhone} onChange={(e) => setEditPhone(e.target.value)} placeholder="Телефон" />
-                  <input value={editTags} onChange={(e) => setEditTags(e.target.value)} placeholder="Теги" />
-                </>
-              ) : (
-                <>
-                  <div className="name">{c.name}</div>
-                  <div className="contact">
-                    {c.email && <span>{c.email}</span>}
-                    {c.phone && <span>{c.phone}</span>}
-                  </div>
-                  {c.tags && c.tags.length > 0 && (
-                    <div className="tags">{c.tags.join(', ')}</div>
-                  )}
-                </>
-              )}
-            </div>
-            {editingId === c.id ? (
-              <>
-                <button className="filter-btn" onClick={() => saveEdit(c.id)}>Сохранить</button>
-                <button className="filter-btn" onClick={cancelEdit}>Отмена</button>
-              </>
-            ) : (
-              <>
-                <button className="btn-delete" onClick={() => removeClient(c.id)}>Удалить</button>
-                <button className="filter-btn" onClick={() => startEdit(c)}>Изменить</button>
-              </>
-            )}
+      <GridLayout
+        className="react-grid-layout"
+        layout={layout}
+        onLayoutChange={setLayout}
+        cols={12}
+        rowHeight={50}
+        width={1000}
+        containerPadding={[0, 0]}
+        margin={[10, 10]}
+        draggableHandle=".drag-handle"
+        isResizable={true}
+        isDraggable={true}
+        compactType="vertical"
+      >
+        {visibleModules.formPanel && (
+          <div key="form-panel" className="react-grid-item">
+            <FormPanel
+              onAddClient={addClient}
+              error={error}
+              onErrorChange={setError}
+            />
           </div>
-        ))}
-      </div>
+        )}
 
-      {totalPages > 1 && (
-        <div style={{ marginTop: '12px', display: 'flex', gap: '8px', justifyContent: 'center' }}>
-          <button disabled={page <= 0} onClick={() => setPage((p) => p - 1)}>Назад</button>
-          <span>Стр. {page + 1}/{totalPages}</span>
-          <button disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)}>Вперед</button>
-        </div>
-      )}
+        {visibleModules.filterPanel && (
+          <div key="filter-panel" className="react-grid-item">
+            <FilterPanel
+              search={search}
+              onSearchChange={setSearch}
+              sortKey={sortKey}
+              onSortKeyChange={setSortKey}
+              sortDir={sortDir}
+              onSortDirChange={setSortDir}
+              onExportJSON={exportJSON}
+              onExportCSV={exportCSV}
+              onImportJSON={importJSON}
+            />
+          </div>
+        )}
+
+        {visibleModules.statsPanel && (
+          <div key="stats-panel" className="react-grid-item">
+            <StatisticsPanel clients={clients} onResetLayout={handleResetLayout} />
+          </div>
+        )}
+
+        {visibleModules.clientListPanel && (
+          <div key="client-list-panel" className="react-grid-item">
+            <ClientListPanel
+              clients={paged}
+              page={page}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onEditClient={startEdit}
+              onSaveEdit={saveEdit}
+              onCancelEdit={cancelEdit}
+              onRemoveClient={removeClient}
+              editingId={editingId}
+              editName={editName}
+              editEmail={editEmail}
+              editPhone={editPhone}
+              editTags={editTags}
+              onEditNameChange={setEditName}
+              onEditEmailChange={setEditEmail}
+              onEditPhoneChange={setEditPhone}
+              onEditTagsChange={setEditTags}
+            />
+          </div>
+        )}
+      </GridLayout>
     </div>
   )
 }
