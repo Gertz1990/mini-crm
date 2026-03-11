@@ -279,6 +279,9 @@ export default function CRMApp() {
         isDraggable={true}
         compactType="vertical"
         preventCollision={false}
+        useCSSTransforms={true}
+        isDroppable={true}
+        isBounded={false}
       >
         {visibleModules.formPanel && (
           <div key="form-panel" className="react-grid-item">
