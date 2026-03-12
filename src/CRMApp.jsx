@@ -5,23 +5,28 @@ import FilterPanel from './components/FilterPanel'
 import ClientListPanel from './components/ClientListPanel'
 import StatisticsPanel from './components/StatisticsPanel'
 import DashboardHeader from './components/DashboardHeader'
+import SMSBroadcastPanel from './components/SMSBroadcastPanel'
 
 const STORAGE_KEY = 'mini_crm_clients_v1'
 const LAYOUT_STORAGE_KEY = 'mini_crm_layout_v1'
 const VISIBILITY_STORAGE_KEY = 'mini_crm_visibility_v1'
+const SMS_HISTORY_STORAGE_KEY = 'mini_crm_sms_history_v1'
+const SMS_TEMPLATES_STORAGE_KEY = 'mini_crm_sms_templates_v1'
 
 const DEFAULT_LAYOUT = [
   { x: 0, y: 0, w: 6, h: 4, i: 'form-panel', minW: 4, minH: 2 },
   { x: 6, y: 0, w: 6, h: 4, i: 'filter-panel', minW: 4, minH: 2 },
   { x: 0, y: 4, w: 4, h: 3, i: 'stats-panel', minW: 3, minH: 2 },
-  { x: 4, y: 4, w: 8, h: 5, i: 'client-list-panel', minW: 5, minH: 3 }
+  { x: 4, y: 4, w: 8, h: 5, i: 'client-list-panel', minW: 5, minH: 3 },
+  { x: 0, y: 9, w: 12, h: 6, i: 'sms-broadcast-panel', minW: 6, minH: 4 }
 ]
 
 const DEFAULT_VISIBILITY = {
   formPanel: true,
   filterPanel: true,
   statsPanel: true,
-  clientListPanel: true
+  clientListPanel: true,
+  smsBroadcastPanel: true
 }
 
 function loadClients() {
@@ -63,6 +68,42 @@ function loadVisibility() {
   }
 }
 
+function loadSmsHistory() {
+  try {
+    const raw = localStorage.getItem(SMS_HISTORY_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch (e) {
+    console.error('Failed to load SMS history', e)
+    return []
+  }
+}
+
+function saveSmsHistory(history) {
+  try {
+    localStorage.setItem(SMS_HISTORY_STORAGE_KEY, JSON.stringify(history))
+  } catch (e) {
+    console.error('Failed to save SMS history', e)
+  }
+}
+
+function loadSmsTemplates() {
+  try {
+    const raw = localStorage.getItem(SMS_TEMPLATES_STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch (e) {
+    console.error('Failed to load SMS templates', e)
+    return []
+  }
+}
+
+function saveSmsTemplates(templates) {
+  try {
+    localStorage.setItem(SMS_TEMPLATES_STORAGE_KEY, JSON.stringify(templates))
+  } catch (e) {
+    console.error('Failed to save SMS templates', e)
+  }
+}
+
 export default function CRMApp() {
   const [clients, setClients] = useState(() => loadClients())
   const [layout, setLayout] = useState(() => loadLayout())
@@ -71,6 +112,12 @@ export default function CRMApp() {
     const container = document.querySelector('.react-grid-layout') || document.querySelector('.app-root')
     return container ? container.clientWidth - 20 : window.innerWidth - 20
   })
+
+  // SMS state
+  const [smsHistory, setSmsHistory] = useState(() => loadSmsHistory())
+  const [smsTemplates, setSmsTemplates] = useState(() => loadSmsTemplates())
+  const [smsSelectedClients, setSmsSelectedClients] = useState([])
+  const [smsCurrentMessage, setSmsCurrentMessage] = useState('')
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -125,6 +172,16 @@ export default function CRMApp() {
       console.error('Failed to save visibility', e)
     }
   }, [visibleModules])
+
+  // Persist SMS history to localStorage
+  useEffect(() => {
+    saveSmsHistory(smsHistory)
+  }, [smsHistory])
+
+  // Persist SMS templates to localStorage
+  useEffect(() => {
+    saveSmsTemplates(smsTemplates)
+  }, [smsTemplates])
 
   // helpers
   function addClient(clientData) {
@@ -225,6 +282,23 @@ export default function CRMApp() {
     a.href = url; a.download = `clients-${Date.now()}.csv`
     a.click()
     URL.revokeObjectURL(url)
+  }
+
+  // SMS handlers
+  const handleAddBroadcast = (broadcast) => {
+    setSmsHistory((prev) => [broadcast, ...prev])
+  }
+
+  const handleAddTemplate = (template) => {
+    setSmsTemplates((prev) => [...prev, template])
+  }
+
+  const handleDeleteTemplate = (templateId) => {
+    setSmsTemplates((prev) => prev.filter((t) => t.id !== templateId))
+  }
+
+  const handleClearHistory = () => {
+    setSmsHistory([])
   }
 
   // derived list
@@ -347,6 +421,24 @@ export default function CRMApp() {
               onEditEmailChange={setEditEmail}
               onEditPhoneChange={setEditPhone}
               onEditTagsChange={setEditTags}
+            />
+          </div>
+        )}
+
+        {visibleModules.smsBroadcastPanel && (
+          <div key="sms-broadcast-panel" className="react-grid-item">
+            <SMSBroadcastPanel
+              clients={clients}
+              history={smsHistory}
+              templates={smsTemplates}
+              selectedClients={smsSelectedClients}
+              currentMessage={smsCurrentMessage}
+              onMessageChange={setSmsCurrentMessage}
+              onSelectedClientsChange={setSmsSelectedClients}
+              onAddHistory={handleAddBroadcast}
+              onAddTemplate={handleAddTemplate}
+              onDeleteTemplate={handleDeleteTemplate}
+              onClearHistory={handleClearHistory}
             />
           </div>
         )}

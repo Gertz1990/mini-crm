@@ -7,7 +7,8 @@ export default function DashboardHeader({ visibleModules, onToggleModule }) {
     { key: 'formPanel', label: '📋 Форма добавления' },
     { key: 'filterPanel', label: '🔍 Поиск и фильтры' },
     { key: 'statsPanel', label: '📊 Статистика' },
-    { key: 'clientListPanel', label: '👥 Список клиентов' }
+    { key: 'clientListPanel', label: '👥 Список клиентов' },
+    { key: 'smsBroadcastPanel', label: '📤 SMS Рассылка' }
   ]
 
   return (
