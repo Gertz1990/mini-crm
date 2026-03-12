@@ -67,7 +67,10 @@ export default function CRMApp() {
   const [clients, setClients] = useState(() => loadClients())
   const [layout, setLayout] = useState(() => loadLayout())
   const [visibleModules, setVisibleModules] = useState(() => loadVisibility())
-  const [containerWidth, setContainerWidth] = useState(window.innerWidth - 60)
+  const [containerWidth, setContainerWidth] = useState(() => {
+    const container = document.querySelector('.react-grid-layout') || document.querySelector('.app-root')
+    return container ? container.clientWidth - 20 : window.innerWidth - 20
+  })
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')
@@ -88,9 +91,16 @@ export default function CRMApp() {
   // Handle window resize
   useEffect(() => {
     const handleResize = () => {
-      setContainerWidth(window.innerWidth - 60)
+      const container = document.querySelector('.react-grid-layout') || document.querySelector('.app-root')
+      if (container) {
+        setContainerWidth(container.clientWidth - 20)
+      } else {
+        setContainerWidth(window.innerWidth - 20)
+      }
     }
     window.addEventListener('resize', handleResize)
+    // Call once after layout renders
+    setTimeout(handleResize, 0)
     return () => window.removeEventListener('resize', handleResize)
   }, [])
 
@@ -272,7 +282,7 @@ export default function CRMApp() {
         cols={12}
         rowHeight={50}
         width={containerWidth}
-        containerPadding={[0, 0]}
+        containerPadding={[10, 10]}
         margin={[10, 10]}
         draggableHandle=".drag-handle"
         isResizable={true}
@@ -282,6 +292,8 @@ export default function CRMApp() {
         useCSSTransforms={true}
         isDroppable={true}
         isBounded={false}
+        verticalCompact={true}
+        measureBeforeMount={false}
       >
         {visibleModules.formPanel && (
           <div key="form-panel" className="react-grid-item">
